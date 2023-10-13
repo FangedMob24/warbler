@@ -168,6 +168,18 @@ class User(db.Model):
                 return user
 
         return False
+    
+    @classmethod
+    def edit(cls, orig_username, new_username, email, image_url, header_image_url, bio):
+        user = cls.query.filter_by(username=orig_username).first()
+
+        user.username = new_username or user.username
+        user.email = email or user.email
+        user.image_url = image_url or user.image_url
+        user.header_image_url = header_image_url or user.header_image_url
+        user.bio = bio or user.bio
+
+        return user
 
 
 class Message(db.Model):
