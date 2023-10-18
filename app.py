@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, EditUserForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Likes
 
 CURR_USER_KEY = "curr_user"
 
@@ -248,6 +248,44 @@ def delete_user():
     return redirect("/signup")
 
 
+@app.route('/users/add_like/<int:msg_id>', methods=["POST"])
+def add_like(msg_id):
+    """Adds a liked message to the user profile"""
+    user = g.user
+    msg = msg_id
+
+    if msg in [like.id for like in g.user.likes]:
+        like = (Likes
+                .query
+                .filter(Likes.message_id == msg)
+                .all())
+        db.session.delete(like[0])
+        db.session.commit()
+
+        return redirect('/')
+    else:
+        new_like = Likes(user_id=user.id,message_id=msg)
+
+        db.session.add(new_like)
+        db.session.commit()
+
+        return redirect('/')
+    
+
+@app.route('/users/<int:user_id>/likes')
+def users_likes(user_id):
+    """shows the users liked messages"""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    likes = [like.id for like in g.user.likes]
+    user = User.query.get_or_404(user_id)
+    return render_template('users/likes.html', user=user, likes=likes)
+
+
+
 ##############################################################################
 # Messages routes:
 
@@ -312,11 +350,14 @@ def homepage():
     if g.user:
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_([following.id for following in g.user.following]))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
+        
+        likes = [like.id for like in g.user.likes]
 
-        return render_template('home.html', messages=messages)
+        return render_template('home.html', messages=messages, likes=likes)
 
     else:
         return render_template('home-anon.html')
