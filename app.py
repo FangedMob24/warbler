@@ -251,6 +251,11 @@ def delete_user():
 @app.route('/users/add_like/<int:msg_id>', methods=["POST"])
 def add_like(msg_id):
     """Adds a liked message to the user profile"""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
     user = g.user
     msg = msg_id
 
